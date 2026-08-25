@@ -16,7 +16,11 @@ func (s StudentService) Create(ctx context.Context, u domain.User, name string, 
 	if name == "" || year < 2020 {
 		return domain.Student{}, fmt.Errorf("%w: student fields", domain.ErrInvalid)
 	}
-	x := domain.Student{ID: fmt.Sprintf("stu-%d", len(name)+year), OwnerID: u.ID, Name: name, GraduationYear: year, Region: region, Version: 1}
+	id, err := newID("stu")
+	if err != nil {
+		return domain.Student{}, err
+	}
+	x := domain.Student{ID: id, OwnerID: u.ID, Name: name, GraduationYear: year, Region: region, Version: 1}
 	return x, s.Repo.Create(ctx, x)
 }
 func (s StudentService) AddInterest(ctx context.Context, u domain.User, id, tag string, w float64) error {

@@ -19,7 +19,11 @@ func (s RecommendationService) Create(ctx context.Context, u domain.User, studen
 	if len(items) == 0 {
 		return domain.Recommendation{}, fmt.Errorf("%w: items required", domain.ErrInvalid)
 	}
-	return s.Repo.Create(ctx, repository.RecommendationInput{ID: fmt.Sprintf("rec-%d", len(note)+len(items)), StudentID: student, CreatedBy: u.ID, Note: note, Items: items}, request)
+	id, err := newID("rec")
+	if err != nil {
+		return domain.Recommendation{}, err
+	}
+	return s.Repo.Create(ctx, repository.RecommendationInput{ID: id, StudentID: student, CreatedBy: u.ID, Note: note, Items: items}, request)
 }
 func (s RecommendationService) Submit(ctx context.Context, u domain.User, id string, version int) error {
 	r, e := s.Repo.ByID(ctx, id)
