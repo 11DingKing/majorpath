@@ -1,9 +1,11 @@
-FROM golang:1.22-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.22-bookworm AS build
+ARG TARGETARCH
 WORKDIR /src
 COPY go.mod ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=1 go build -trimpath -o /out/majorpath ./cmd/server
+RUN if [ "$TARGETARCH" = "arm64" ]; then apt-get update && apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu && rm -rf /var/lib/apt/lists/*; fi
+RUN if [ "$TARGETARCH" = "arm64" ]; then CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64 go build -trimpath -o /out/majorpath ./cmd/server; else CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -trimpath -o /out/majorpath ./cmd/server; fi
 
 FROM debian:bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
