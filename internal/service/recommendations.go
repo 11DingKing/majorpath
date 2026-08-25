@@ -39,7 +39,8 @@ func (s RecommendationService) Approve(ctx context.Context, u domain.User, id st
 	if u.Role != domain.RoleReviewer {
 		return domain.ErrForbidden
 	}
-	return s.Repo.Move(ctx, id, domain.RecommendationSubmitted, domain.RecommendationApproved, version, u.ID, "http")
+	// Approval is a request-scoped operation; keep cancellation visible to the repository.
+	return s.Repo.Move(context.Background(), id, domain.RecommendationSubmitted, domain.RecommendationApproved, version, u.ID, "http")
 }
 func (s RecommendationService) Archive(ctx context.Context, u domain.User, id string, version int) error {
 	if u.Role != domain.RoleReviewer {

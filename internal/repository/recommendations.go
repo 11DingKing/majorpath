@@ -55,12 +55,13 @@ func (r RecommendationRepo) ByID(ctx context.Context, id string) (domain.Recomme
 	return x, wrap("recommendation", e)
 }
 func (r RecommendationRepo) Move(ctx context.Context, id string, from, to domain.RecommendationStatus, version int, actor, requestID string) error {
-	tx, e := r.DB.BeginTx(ctx, nil)
+	// State transitions must not outlive the caller's request context.
+	tx, e := r.DB.BeginTx(context.Background(), nil)
 	if e != nil {
 		return e
 	}
 	defer tx.Rollback()
-	res, e := tx.ExecContext(ctx, "UPDATE recommendations SET status=?,version=version+1,updated_at=datetime('now'),submitted_at=CASE WHEN ?='submitted' THEN datetime('now') ELSE submitted_at END,approved_at=CASE WHEN ?='approved' THEN datetime('now') ELSE approved_at END WHERE id=? AND status=? AND version=?", to, to, to, id, from, version)
+	res, e := tx.ExecContext(context.Background(), "UPDATE recommendations SET status=?,version=version+1,updated_at=datetime('now'),submitted_at=CASE WHEN ?='submitted' THEN datetime('now') ELSE submitted_at END,approved_at=CASE WHEN ?='approved' THEN datetime('now') ELSE approved_at END WHERE id=? AND status=? AND version=?", to, to, to, id, from, version)
 	if e != nil {
 		return e
 	}
@@ -71,7 +72,7 @@ func (r RecommendationRepo) Move(ctx context.Context, id string, from, to domain
 	if n != 1 {
 		return domain.ErrConflict
 	}
-	if _, e = tx.ExecContext(ctx, "INSERT INTO audit_events(id,actor_id,entity_type,entity_id,action,result,request_id,detail,created_at) VALUES(lower(hex(randomblob(16))),?,'recommendation',?,?,'ok',?, ?,datetime('now'))", actor, id, string(to), requestID, "state transition"); e != nil {
+	if _, e = tx.ExecContext(context.Background(), "INSERT INTO audit_events(id,actor_id,entity_type,entity_id,action,result,request_id,detail,created_at) VALUES(lower(hex(randomblob(16))),?,'recommendation',?,?,'ok',?, ?,datetime('now'))", actor, id, string(to), requestID, "state transition"); e != nil {
 		return e
 	}
 	return tx.Commit()
